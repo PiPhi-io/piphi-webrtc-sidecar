@@ -1,0 +1,158 @@
+{
+  "$schema": "./schema/piphi-manifest.schema.json",
+  "manifest_version": "1.0",
+  "kind": "platform_service",
+  "id": "piphi.service.webrtc-sidecar",
+  "name": "PiPhi WebRTC Sidecar",
+  "version": "0.1.1",
+  "description": "Local go2rtc-backed camera signaling service for PiPhi dashboard widgets.",
+  "metadata": {
+    "generator": "piphi-network-create",
+    "scaffold_version": "0.3.0",
+    "preset": "platform-service",
+    "domain": "sidecar-service",
+    "upstream": {
+      "name": "go2rtc",
+      "version": "1.9.13",
+      "repository": "https://github.com/AlexxIT/go2rtc"
+    },
+    "helper_runtime": {
+      "service": "piphi-webrtc-sidecar",
+      "linux": {
+        "mode": "container",
+        "supervisor": "docker",
+        "recommended_for": ["local_service", "network_service"]
+      }
+    }
+  },
+  "maintainer": {
+    "name": "PiPhi-io",
+    "website": "https://github.com/PiPhi-io",
+    "support_email": "support@piphi.io"
+  },
+  "license": "MIT",
+  "image": "ghcr.io/piphi-io/piphi-webrtc-sidecar:0.1.1",
+  "platforms": ["linux"],
+  "runtime_requirements": ["sidecar_runtime", "local_network_access", "webrtc_udp_8555"],
+  "runtime": {
+    "linux": {
+      "type": "container",
+      "container": {
+        "image": "ghcr.io/piphi-io/piphi-webrtc-sidecar:0.1.1",
+        "ports": [
+          {"container": 8090, "host": 8090},
+          {"container": 8555, "host": 8555, "protocol": "tcp"},
+          {"container": 8555, "host": 8555, "protocol": "udp"}
+        ],
+        "environment": {
+          "LOG_LEVEL": "info",
+          "PIPHI_ENV": "production",
+          "GO2RTC_URL": "http://127.0.0.1:1984"
+        },
+        "restart_policy": {"name": "unless-stopped", "maximum_retry_count": 0}
+      },
+      "discovery": {"method": "passive"}
+    }
+  },
+  "api": {
+    "required": ["health", "entities", "command", "config", "ui_config"],
+    "endpoints": {
+      "health": "/health",
+      "diagnostics": "/diagnostics",
+      "discover": "/discover",
+      "entities": "/entities",
+      "state": "/state",
+      "config": "/config",
+      "config_sync": "/config/sync",
+      "deconfigure": "/deconfigure",
+      "ui_config": "/ui-config",
+      "events": "/events",
+      "command": "/command",
+      "webrtc": "/v1/cameras/{config_id}/webrtc",
+      "snapshot": "/v1/cameras/{config_id}/snapshot"
+    }
+  },
+  "config": {
+    "source": "endpoint",
+    "endpoint": "/ui-config",
+    "required": true,
+    "editable_fields": ["source_url", "alias"],
+    "secret_fields": ["source_url"],
+    "runtime_fields": ["id", "config_id", "container_id", "device_id"],
+    "identity_fields": ["source_url"]
+  },
+  "identity": {"fields": ["source_url"]},
+  "capabilities": {
+    "camera_stream": {
+      "kind": "camera",
+      "camera": {
+        "snapshot_endpoint": "/v1/cameras/{config_id}/snapshot",
+        "webrtc_endpoint": "/v1/cameras/{config_id}/webrtc",
+        "refresh_seconds": 15
+      }
+    },
+    "refresh": {"kind": "action"},
+    "service_available": {"kind": "sensor", "unit": "bool"}
+  },
+  "commands": {
+    "refresh": {"description": "Refresh camera service availability.", "timeout_ms": 5000}
+  },
+  "entities": [
+    {
+      "id": "camera",
+      "name": "Camera",
+      "device_id": "camera",
+      "entity_type": "camera",
+      "capabilities": ["camera_stream", "refresh", "service_available"],
+      "available_commands": [
+        {"id": "refresh", "label": "Refresh", "kind": "action"}
+      ],
+      "dashboard": {
+        "allowed_widgets": ["tile", "stat", "button", "io.piphi.webrtc.camera"],
+        "default_widget": "io.piphi.webrtc.camera"
+      }
+    }
+  ],
+  "marketplace": {
+    "metadata_version": 2,
+    "display_name": "WebRTC Camera Service",
+    "summary": "Connect local RTSP cameras to low-latency PiPhi dashboards.",
+    "category": "camera",
+    "regions": ["WW"],
+    "languages": ["en"],
+    "publisher": {
+      "name": "PiPhi-io",
+      "website_url": "https://github.com/PiPhi-io",
+      "support_url": "https://github.com/PiPhi-io/piphi-webrtc-sidecar/issues",
+      "security_contact": "support@piphi.io"
+    },
+    "access": [
+      {
+        "id": "local_camera_network",
+        "label": "Local camera network",
+        "reason": "Connects only to the administrator-configured RTSP camera URL.",
+        "required": true
+      },
+      {
+        "id": "camera_credentials",
+        "label": "Camera credentials",
+        "reason": "Uses credentials embedded in the configured RTSP URL without exposing them to Core or dashboards.",
+        "required": false
+      }
+    ],
+    "compatibility": [
+      {"capability": "camera_stream", "host_protocol": "piphi.widget.host/1", "widget_sdk": ">=0.4.0"}
+    ],
+    "documentation_url": "https://github.com/PiPhi-io/piphi-webrtc-sidecar",
+    "support_url": "https://github.com/PiPhi-io/piphi-webrtc-sidecar/issues",
+    "changelog_url": "https://github.com/PiPhi-io/piphi-webrtc-sidecar/releases",
+    "quality_tier": "unrated",
+    "governance": {
+      "schema_version": 1,
+      "publication_status": "draft",
+      "rollout_percent": 0,
+      "lifecycle_status": "active",
+      "qualification": {"status": "unverified"}
+    }
+  }
+}

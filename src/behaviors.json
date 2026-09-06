@@ -1,0 +1,21 @@
+{
+  "behaviorSchemaVersion": "integration.behaviors.v2",
+  "devices": [
+    {
+      "id": "camera",
+      "actions": [
+        {
+          "id": "refresh",
+          "label": "Refresh camera availability",
+          "runtime": {"command": "refresh", "timeoutMs": 5000},
+          "safety": {
+            "riskLevel": "low",
+            "confirmationRequired": false,
+            "idempotent": true
+          }
+        }
+      ]
+    }
+  ],
+  "templates": []
+}
