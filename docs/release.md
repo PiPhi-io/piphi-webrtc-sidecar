@@ -9,7 +9,7 @@ pdm run ruff check src tests scripts
 pdm run ruff format --check src tests scripts
 pdm run pytest
 pdm run python scripts/validate.py
-pdm run python scripts/check_release.py v0.1.1
+pdm run python scripts/check_release.py v0.1.2
 piphi-network-create publish-check -C .
 ```
 

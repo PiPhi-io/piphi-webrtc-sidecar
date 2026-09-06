@@ -4,7 +4,7 @@ import os
 
 INTEGRATION_ID = "piphi.service.webrtc-sidecar"
 INTEGRATION_NAME = "PiPhi WebRTC Sidecar"
-INTEGRATION_VERSION = "0.1.1"
+INTEGRATION_VERSION = "0.1.2"
 PROJECT_KIND = "sidecar"
 PROJECT_PRESET = "platform-service"
 PROJECT_DOMAIN = "sidecar-service"

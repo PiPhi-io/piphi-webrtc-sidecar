@@ -30,7 +30,7 @@ jobs:
           pdm run ruff format --check src tests scripts
           pdm run pytest
           pdm run python scripts/validate.py
-          pdm run python scripts/check_release.py v0.1.1
+          pdm run python scripts/check_release.py v0.1.2
 
   container:
     runs-on: ubuntu-latest
@@ -38,6 +38,6 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - name: Build production container
-        run: docker build --build-arg APP_VERSION=0.1.1 -t piphi-webrtc-sidecar:ci .
+        run: docker build --build-arg APP_VERSION=0.1.2 -t piphi-webrtc-sidecar:ci .
       - name: Verify embedded go2rtc
         run: docker run --rm piphi-webrtc-sidecar:ci /usr/local/bin/go2rtc -version

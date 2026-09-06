@@ -4,7 +4,7 @@
   "kind": "platform_service",
   "id": "piphi.service.webrtc-sidecar",
   "name": "PiPhi WebRTC Sidecar",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Local go2rtc-backed camera signaling service for PiPhi dashboard widgets.",
   "metadata": {
     "generator": "piphi-network-create",
@@ -31,14 +31,19 @@
     "support_email": "support@piphi.io"
   },
   "license": "MIT",
-  "image": "ghcr.io/piphi-io/piphi-webrtc-sidecar:0.1.1",
+  "image": "ghcr.io/piphi-io/piphi-webrtc-sidecar:0.1.2",
   "platforms": ["linux"],
-  "runtime_requirements": ["sidecar_runtime", "local_network_access", "webrtc_udp_8555"],
+  "runtime_requirements": [
+    "sidecar_runtime",
+    "local_network_access",
+    "secrets_or_api_tokens",
+    "webrtc_udp_8555"
+  ],
   "runtime": {
     "linux": {
       "type": "container",
       "container": {
-        "image": "ghcr.io/piphi-io/piphi-webrtc-sidecar:0.1.1",
+        "image": "ghcr.io/piphi-io/piphi-webrtc-sidecar:0.1.2",
         "ports": [
           {"container": 8090, "host": 8090},
           {"container": 8555, "host": 8555, "protocol": "tcp"},
@@ -118,8 +123,13 @@
     "display_name": "WebRTC Camera Service",
     "summary": "Connect local RTSP cameras to low-latency PiPhi dashboards.",
     "category": "camera",
+    "device_types": ["camera", "platform_service"],
+    "protocols": ["rtsp", "rtsps", "webrtc"],
     "regions": ["WW"],
     "languages": ["en"],
+    "discovery_methods": ["manual"],
+    "connectivity": "local",
+    "offline_support": "full",
     "publisher": {
       "name": "PiPhi-io",
       "website_url": "https://github.com/PiPhi-io",
@@ -127,6 +137,12 @@
       "security_contact": "support@piphi.io"
     },
     "access": [
+      {
+        "id": "companion_service",
+        "label": "Background camera service",
+        "reason": "Keeps the local WebRTC camera bridge running for PiPhi dashboards.",
+        "required": true
+      },
       {
         "id": "local_camera_network",
         "label": "Local camera network",
@@ -140,9 +156,7 @@
         "required": false
       }
     ],
-    "compatibility": [
-      {"capability": "camera_stream", "host_protocol": "piphi.widget.host/1", "widget_sdk": ">=0.4.0"}
-    ],
+    "compatibility": [],
     "documentation_url": "https://github.com/PiPhi-io/piphi-webrtc-sidecar",
     "support_url": "https://github.com/PiPhi-io/piphi-webrtc-sidecar/issues",
     "changelog_url": "https://github.com/PiPhi-io/piphi-webrtc-sidecar/releases",

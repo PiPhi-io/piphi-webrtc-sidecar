@@ -10,7 +10,7 @@ RUN pdm export --prod --without-hashes --output requirements.txt
 
 FROM python:3.12-slim@sha256:78387bc3881b8273120a12ebe6c1ab22b018ccc2c9adf565ae1ac9b536e184ea
 
-ARG APP_VERSION=0.1.1
+ARG APP_VERSION=0.1.2
 LABEL org.opencontainers.image.title="PiPhi WebRTC Sidecar" \
       org.opencontainers.image.description="Private go2rtc adapter for PiPhi camera widgets" \
       org.opencontainers.image.source="https://github.com/PiPhi-io/piphi-webrtc-sidecar" \
