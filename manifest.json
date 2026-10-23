@@ -4,7 +4,7 @@
   "kind": "platform_service",
   "id": "piphi.service.webrtc-sidecar",
   "name": "PiPhi WebRTC Sidecar",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Local go2rtc-backed camera signaling service for PiPhi dashboard widgets.",
   "metadata": {
     "generator": "piphi-network-create",
@@ -21,7 +21,10 @@
       "linux": {
         "mode": "container",
         "supervisor": "docker",
-        "recommended_for": ["local_service", "network_service"]
+        "recommended_for": [
+          "local_service",
+          "network_service"
+        ]
       }
     }
   },
@@ -31,8 +34,10 @@
     "support_email": "support@piphi.io"
   },
   "license": "MIT",
-  "image": "ghcr.io/piphi-io/piphi-webrtc-sidecar:0.1.2",
-  "platforms": ["linux"],
+  "image": "ghcr.io/piphi-io/piphi-webrtc-sidecar:0.2.0",
+  "platforms": [
+    "linux"
+  ],
   "runtime_requirements": [
     "sidecar_runtime",
     "local_network_access",
@@ -43,24 +48,46 @@
     "linux": {
       "type": "container",
       "container": {
-        "image": "ghcr.io/piphi-io/piphi-webrtc-sidecar:0.1.2",
+        "image": "ghcr.io/piphi-io/piphi-webrtc-sidecar:0.2.0",
         "ports": [
-          {"container": 8090, "host": 8090},
-          {"container": 8555, "host": 8555, "protocol": "tcp"},
-          {"container": 8555, "host": 8555, "protocol": "udp"}
+          {
+            "container": 8090,
+            "host": 8090
+          },
+          {
+            "container": 8555,
+            "host": 8555,
+            "protocol": "tcp"
+          },
+          {
+            "container": 8555,
+            "host": 8555,
+            "protocol": "udp"
+          }
         ],
         "environment": {
           "LOG_LEVEL": "info",
           "PIPHI_ENV": "production",
           "GO2RTC_URL": "http://127.0.0.1:1984"
         },
-        "restart_policy": {"name": "unless-stopped", "maximum_retry_count": 0}
+        "restart_policy": {
+          "name": "unless-stopped",
+          "maximum_retry_count": 0
+        }
       },
-      "discovery": {"method": "passive"}
+      "discovery": {
+        "method": "passive"
+      }
     }
   },
   "api": {
-    "required": ["health", "entities", "command", "config", "ui_config"],
+    "required": [
+      "health",
+      "entities",
+      "command",
+      "config",
+      "ui_config"
+    ],
     "endpoints": {
       "health": "/health",
       "diagnostics": "/diagnostics",
@@ -81,12 +108,28 @@
     "source": "endpoint",
     "endpoint": "/ui-config",
     "required": true,
-    "editable_fields": ["source_url", "alias"],
-    "secret_fields": ["source_url"],
-    "runtime_fields": ["id", "config_id", "container_id", "device_id"],
-    "identity_fields": ["source_url"]
+    "editable_fields": [
+      "source_url",
+      "alias"
+    ],
+    "secret_fields": [
+      "source_url"
+    ],
+    "runtime_fields": [
+      "id",
+      "config_id",
+      "container_id",
+      "device_id"
+    ],
+    "identity_fields": [
+      "source_url"
+    ]
   },
-  "identity": {"fields": ["source_url"]},
+  "identity": {
+    "fields": [
+      "source_url"
+    ]
+  },
   "capabilities": {
     "camera_stream": {
       "kind": "camera",
@@ -96,11 +139,19 @@
         "refresh_seconds": 15
       }
     },
-    "refresh": {"kind": "action"},
-    "service_available": {"kind": "sensor", "unit": "bool"}
+    "refresh": {
+      "kind": "action"
+    },
+    "service_available": {
+      "kind": "sensor",
+      "unit": "bool"
+    }
   },
   "commands": {
-    "refresh": {"description": "Refresh camera service availability.", "timeout_ms": 5000}
+    "refresh": {
+      "description": "Refresh camera service availability.",
+      "timeout_ms": 5000
+    }
   },
   "entities": [
     {
@@ -108,12 +159,25 @@
       "name": "Camera",
       "device_id": "camera",
       "entity_type": "camera",
-      "capabilities": ["camera_stream", "refresh", "service_available"],
+      "capabilities": [
+        "camera_stream",
+        "refresh",
+        "service_available"
+      ],
       "available_commands": [
-        {"id": "refresh", "label": "Refresh", "kind": "action"}
+        {
+          "id": "refresh",
+          "label": "Refresh",
+          "kind": "action"
+        }
       ],
       "dashboard": {
-        "allowed_widgets": ["tile", "stat", "button", "io.piphi.webrtc.camera"],
+        "allowed_widgets": [
+          "tile",
+          "stat",
+          "button",
+          "io.piphi.webrtc.camera"
+        ],
         "default_widget": "io.piphi.webrtc.camera"
       }
     }
@@ -123,11 +187,24 @@
     "display_name": "WebRTC Camera Service",
     "summary": "Connect local RTSP cameras to low-latency PiPhi dashboards.",
     "category": "camera",
-    "device_types": ["camera", "platform_service"],
-    "protocols": ["rtsp", "rtsps", "webrtc"],
-    "regions": ["WW"],
-    "languages": ["en"],
-    "discovery_methods": ["manual"],
+    "device_types": [
+      "camera",
+      "platform_service"
+    ],
+    "protocols": [
+      "rtsp",
+      "rtsps",
+      "webrtc"
+    ],
+    "regions": [
+      "WW"
+    ],
+    "languages": [
+      "en"
+    ],
+    "discovery_methods": [
+      "manual"
+    ],
     "connectivity": "local",
     "offline_support": "full",
     "publisher": {
@@ -166,7 +243,9 @@
       "publication_status": "draft",
       "rollout_percent": 0,
       "lifecycle_status": "active",
-      "qualification": {"status": "unverified"}
+      "qualification": {
+        "status": "unverified"
+      }
     }
   }
 }

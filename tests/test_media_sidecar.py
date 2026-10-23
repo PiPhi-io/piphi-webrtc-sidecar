@@ -76,16 +76,19 @@ async def test_sidecar_sessions_are_ephemeral_and_never_return_the_source(monkey
 async def test_sidecar_rejects_browser_audience_and_extra_source_fields() -> None:
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.post("/v1/camera-media/sessions", json={
-            "audience": "browser-core",
-            "source": {
-                "camera_id": "front-door",
-                "source_url": "rtsp://camera.local/live",
-                "source_protocol": "rtsp",
-                "password": "must-not-be-accepted",
+        response = await client.post(
+            "/v1/camera-media/sessions",
+            json={
+                "audience": "browser-core",
+                "source": {
+                    "camera_id": "front-door",
+                    "source_url": "rtsp://camera.local/live",
+                    "source_protocol": "rtsp",
+                    "password": "must-not-be-accepted",
+                },
+                "offer": {"type": "offer", "sdp": "v=0"},
             },
-            "offer": {"type": "offer", "sdp": "v=0"},
-        })
+        )
     assert response.status_code == 422
 
 
