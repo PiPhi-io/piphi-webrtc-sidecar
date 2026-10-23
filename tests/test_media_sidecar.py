@@ -1,0 +1,137 @@
+from __future__ import annotations
+
+import asyncio
+
+import httpx
+import pytest
+
+from piphi_webrtc_sidecar.main import app
+from piphi_webrtc_sidecar.media_sessions import CameraMediaSessionBroker
+
+
+class FakeGo2Rtc:
+    def __init__(self) -> None:
+        self.sources: dict[str, str] = {}
+        self.removed: list[str] = []
+
+    async def upsert_stream(self, name: str, source_url: str) -> None:
+        self.sources[name] = source_url
+
+    async def exchange_offer(self, name: str, sdp: str) -> str:
+        assert name in self.sources
+        assert sdp == "v=0\r\n"
+        return "v=0\r\na=answer\r\n"
+
+    async def remove_stream(self, name: str) -> None:
+        self.sources.pop(name, None)
+        self.removed.append(name)
+
+
+@pytest.mark.anyio
+async def test_sidecar_sessions_are_ephemeral_and_never_return_the_source(monkeypatch) -> None:
+    fake = FakeGo2Rtc()
+    broker = CameraMediaSessionBroker(fake, capacity=1)  # type: ignore[arg-type]
+    monkeypatch.setattr("piphi_webrtc_sidecar.routes.media_sidecar.media_session_broker", broker)
+    transport = httpx.ASGITransport(app=app)
+    request = {
+        "contract_version": "camera.media.v1",
+        "message_type": "camera.sidecar.session.open",
+        "audience": "core-sidecar",
+        "source": {
+            "contract_version": "camera.media.v1",
+            "message_type": "camera.source",
+            "audience": "core-sidecar",
+            "camera_id": "front-door",
+            "source_url": "rtsp://user:top-secret@camera.local/live",
+            "source_protocol": "rtsp",
+            "preferred_transport": "tcp",
+        },
+        "offer": {"type": "offer", "sdp": "v=0\r\n", "include_audio": False},
+        "idle_timeout_seconds": 60,
+    }
+
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        opened = await client.post("/v1/camera-media/sessions", json=request)
+        assert opened.status_code == 201
+        payload = opened.json()
+        assert payload["contract_version"] == "camera.media.v1"
+        assert payload["audience"] == "core-sidecar"
+        assert "source" not in payload
+        assert "camera.local" not in opened.text
+
+        at_capacity = await client.post("/v1/camera-media/sessions", json=request)
+        assert at_capacity.status_code == 429
+        assert at_capacity.json()["detail"]["code"] == "CAMERA_CAPACITY_REACHED"
+
+        closed = await client.delete(f"/v1/camera-media/sessions/{payload['session_id']}")
+        assert closed.status_code == 204
+        status = await client.get("/v1/camera-media/status")
+
+    assert status.json()["active_sessions"] == 0
+    assert fake.sources == {}
+    assert len(fake.removed) == 1
+
+
+@pytest.mark.anyio
+async def test_sidecar_rejects_browser_audience_and_extra_source_fields() -> None:
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post("/v1/camera-media/sessions", json={
+            "audience": "browser-core",
+            "source": {
+                "camera_id": "front-door",
+                "source_url": "rtsp://camera.local/live",
+                "source_protocol": "rtsp",
+                "password": "must-not-be-accepted",
+            },
+            "offer": {"type": "offer", "sdp": "v=0"},
+        })
+    assert response.status_code == 422
+
+
+@pytest.mark.anyio
+async def test_sidecar_requires_constant_time_bearer_auth_when_configured(monkeypatch) -> None:
+    monkeypatch.setenv("PIPHI_SIDECAR_TOKEN", "a" * 32)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        missing = await client.get("/v1/camera-media/status")
+        wrong = await client.get(
+            "/v1/camera-media/status",
+            headers={"authorization": f"Bearer {'b' * 32}"},
+        )
+        accepted = await client.get(
+            "/v1/camera-media/status",
+            headers={"authorization": f"Bearer {'a' * 32}"},
+        )
+    assert missing.status_code == 401
+    assert wrong.status_code == 401
+    assert accepted.status_code == 200
+
+
+@pytest.mark.anyio
+async def test_sidecar_fails_closed_without_a_production_token(monkeypatch) -> None:
+    monkeypatch.delenv("PIPHI_SIDECAR_TOKEN", raising=False)
+    monkeypatch.setenv("PIPHI_ENV", "production")
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/v1/camera-media/status")
+    assert response.status_code == 503
+
+
+@pytest.mark.anyio
+async def test_broker_actively_expires_abandoned_sessions(monkeypatch) -> None:
+    fake = FakeGo2Rtc()
+    broker = CameraMediaSessionBroker(fake, capacity=1)  # type: ignore[arg-type]
+    monkeypatch.setattr(
+        "piphi_webrtc_sidecar.media_sessions.validate_source_url",
+        lambda value: value,
+    )
+    active, _ = await broker.open(
+        source_url="rtsp://camera.local/live",
+        offer_sdp="v=0\r\n",
+        idle_timeout_seconds=0,
+    )
+    await asyncio.sleep(0)
+    await asyncio.sleep(0)
+    assert broker.active_count == 0
+    assert active.stream_name in fake.removed

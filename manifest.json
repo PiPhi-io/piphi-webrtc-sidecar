@@ -152,7 +152,7 @@
       {
         "id": "camera_credentials",
         "label": "Camera credentials",
-        "reason": "Uses credentials embedded in the configured RTSP URL without exposing them to Core or dashboards.",
+        "reason": "Uses the short-lived RTSP source supplied by Core without exposing it to dashboards, state, or logs.",
         "required": false
       }
     ],
