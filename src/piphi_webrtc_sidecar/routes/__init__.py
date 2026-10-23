@@ -7,11 +7,13 @@ from .discovery import router as discovery_router
 from .entities import router as entity_router
 from .events import router as event_router
 from .health import router as health_router
+from .media_sidecar import router as media_sidecar_router
 from .runtime import router as runtime_router
 
 routers = [
     health_router,
     camera_router,
+    media_sidecar_router,
     discovery_router,
     config_router,
     runtime_router,
