@@ -51,8 +51,7 @@
         "image": "ghcr.io/piphi-io/piphi-webrtc-sidecar:0.2.0",
         "ports": [
           {
-            "container": 8090,
-            "host": 8090
+            "container": 8090
           },
           {
             "container": 8555,
@@ -250,5 +249,10 @@
   },
   "onboarding": {
     "mode": "service"
+  },
+  "runtime_contract": {
+    "version": 1,
+    "port_binding": "core_allocated",
+    "port_env": "PORT"
   }
 }

@@ -39,5 +39,5 @@ COPY --chown=piphi:piphi go2rtc.yaml /etc/piphi/go2rtc.yaml
 USER piphi
 EXPOSE 8090 8555/tcp 8555/udp
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-  CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8090/health', timeout=3)"
-CMD ["uvicorn", "piphi_webrtc_sidecar.main:app", "--host", "0.0.0.0", "--port", "8090"]
+  CMD python -c "import os, urllib.request; urllib.request.urlopen('http://127.0.0.1:' + os.getenv('PORT', '8090') + '/health', timeout=3)"
+CMD ["python", "-m", "piphi_webrtc_sidecar.main"]
