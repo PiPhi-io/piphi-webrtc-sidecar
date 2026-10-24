@@ -247,5 +247,8 @@
         "status": "unverified"
       }
     }
+  },
+  "onboarding": {
+    "mode": "service"
   }
 }
