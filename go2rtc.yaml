@@ -14,5 +14,6 @@ exec:
 
 ffmpeg:
   bin: "/usr/bin/ffmpeg"
+  h264: "-codec:v libx264 -g:v 30 -preset:v veryfast -tune:v zerolatency -profile:v baseline -level:v 4.1 -pix_fmt:v yuv420p"
 
 streams:
