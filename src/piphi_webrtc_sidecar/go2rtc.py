@@ -96,6 +96,7 @@ class Go2RtcClient:
         await self._upsert_stream(name, source)
 
     async def upsert_ffmpeg_stream(self, name: str, source_url: str) -> None:
+        """Relay through FFmpeg without changing camera codecs."""
         source = validate_source_url(source_url)
         parsed = urlsplit(source)
         source_without_fragment = urlunsplit(
@@ -104,6 +105,18 @@ class Go2RtcClient:
         await self._upsert_stream(
             name,
             f"ffmpeg:{source_without_fragment}#video=copy#audio=copy",
+        )
+
+    async def upsert_browser_compatible_ffmpeg_stream(self, name: str, source_url: str) -> None:
+        """Transcode video only after copied H.264 cannot match the WebRTC offer."""
+        source = validate_source_url(source_url)
+        parsed = urlsplit(source)
+        source_without_fragment = urlunsplit(
+            (parsed.scheme, parsed.netloc, parsed.path, parsed.query, "")
+        )
+        await self._upsert_stream(
+            name,
+            f"ffmpeg:{source_without_fragment}#video=h264#audio=copy",
         )
 
     async def _upsert_stream(self, name: str, source: str) -> None:
