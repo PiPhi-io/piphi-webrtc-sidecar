@@ -20,6 +20,14 @@ def test_go2rtc_config_uses_patchable_streams_mapping() -> None:
     assert config.endswith("streams:\n")
 
 
+def test_go2rtc_config_keeps_ffmpeg_relay_private_and_allowlisted() -> None:
+    config = (Path(__file__).parents[1] / "go2rtc.yaml").read_text(encoding="utf-8")
+
+    assert 'listen: "127.0.0.1:8554"' in config
+    assert 'bin: "/usr/bin/ffmpeg"' in config
+    assert '- "/usr/bin/ffmpeg"' in config
+
+
 def test_source_url_is_limited_to_rtsp_and_stream_names_are_safe() -> None:
     assert validate_source_url("rtsps://user:secret@camera.local/live").startswith("rtsps://")
     assert stream_name_for("Front Door/1") == "piphi_front_door_1"

@@ -5,7 +5,7 @@ import os
 import re
 from collections.abc import Mapping
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, urlunsplit
 
 import httpx
 
@@ -13,16 +13,41 @@ import httpx
 class Go2RtcError(RuntimeError):
     """Raised when the private go2rtc control plane rejects a request."""
 
+    def __init__(
+        self,
+        message: str,
+        *,
+        operation: str | None = None,
+        status_code: int | None = None,
+        response_detail: str | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.operation = operation
+        self.status_code = status_code
+        self.response_detail = response_detail
+
+    @property
+    def is_native_source_eof(self) -> bool:
+        return (
+            self.operation == "webrtc_exchange"
+            and self.status_code == 500
+            and (self.response_detail or "").strip().upper() == "EOF"
+        )
+
 
 _CAMERA_SOURCE_PATTERN = re.compile(r"(?i)\brtsps?://[^\s\"']+")
 
 
-def _safe_response_error(response: httpx.Response) -> str:
+def _safe_response_detail(response: httpx.Response) -> str:
     detail = " ".join(response.text.strip().split())
-    detail = _CAMERA_SOURCE_PATTERN.sub("<camera-source>", detail)
+    return _CAMERA_SOURCE_PATTERN.sub("<camera-source>", detail)[:300]
+
+
+def _safe_response_error(response: httpx.Response) -> str:
+    detail = _safe_response_detail(response)
     if not detail:
         return f"status {response.status_code}"
-    return f"status {response.status_code}: {detail[:300]}"
+    return f"status {response.status_code}: {detail}"
 
 
 def validate_source_url(value: str) -> str:
@@ -68,6 +93,20 @@ class Go2RtcClient:
 
     async def upsert_stream(self, name: str, source_url: str) -> None:
         source = validate_source_url(source_url)
+        await self._upsert_stream(name, source)
+
+    async def upsert_ffmpeg_stream(self, name: str, source_url: str) -> None:
+        source = validate_source_url(source_url)
+        parsed = urlsplit(source)
+        source_without_fragment = urlunsplit(
+            (parsed.scheme, parsed.netloc, parsed.path, parsed.query, "")
+        )
+        await self._upsert_stream(
+            name,
+            f"ffmpeg:{source_without_fragment}#video=copy#audio=copy",
+        )
+
+    async def _upsert_stream(self, name: str, source: str) -> None:
         async with self._client(8.0) as client:
             response = await client.put(
                 f"{self.base_url}/api/streams",
@@ -93,8 +132,12 @@ class Go2RtcClient:
                 json={"type": "offer", "sdp": sdp},
             )
         if response.status_code not in {200, 201}:
+            detail = _safe_response_detail(response)
             raise Go2RtcError(
-                f"go2rtc WebRTC exchange failed with {_safe_response_error(response)}"
+                f"go2rtc WebRTC exchange failed with {_safe_response_error(response)}",
+                operation="webrtc_exchange",
+                status_code=response.status_code,
+                response_detail=detail,
             )
         try:
             payload = response.json()

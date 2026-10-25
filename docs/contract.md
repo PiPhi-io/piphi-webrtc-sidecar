@@ -11,7 +11,9 @@
 Core installs one shared service per home. Camera integrations retain ownership of saved devices,
 credentials, and source configuration, and send a source only when opening an authenticated media
 session. The source is forwarded to the loopback-only go2rtc control API and is not persisted by
-this service.
+this service after the session is removed. Native RTSP is attempted first; a native `EOF` during
+WebRTC negotiation triggers one FFmpeg copy-relay retry through a loopback-only RTSP listener.
+Other signaling failures fail closed without changing transport.
 
 ## Runtime endpoints
 

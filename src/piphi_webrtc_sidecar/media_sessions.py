@@ -52,6 +52,17 @@ class CameraMediaSessionBroker:
             await self.client.upsert_stream(stream_name, source)
             try:
                 answer_sdp = await self.client.exchange_offer(stream_name, offer_sdp)
+            except Go2RtcError as exc:
+                if not exc.is_native_source_eof:
+                    await self._remove_stream_safely(stream_name)
+                    raise
+                await self._remove_stream_safely(stream_name)
+                await self.client.upsert_ffmpeg_stream(stream_name, source)
+                try:
+                    answer_sdp = await self.client.exchange_offer(stream_name, offer_sdp)
+                except Exception:
+                    await self._remove_stream_safely(stream_name)
+                    raise
             except Exception:
                 await self._remove_stream_safely(stream_name)
                 raise

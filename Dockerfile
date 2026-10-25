@@ -10,7 +10,7 @@ RUN pdm export --prod --without-hashes --output requirements.txt
 
 FROM python:3.12-slim@sha256:78387bc3881b8273120a12ebe6c1ab22b018ccc2c9adf565ae1ac9b536e184ea
 
-ARG APP_VERSION=0.3.0
+ARG APP_VERSION=0.3.1
 LABEL org.opencontainers.image.title="PiPhi Camera Media Service" \
       org.opencontainers.image.description="Shared private go2rtc media service for PiPhi camera integrations" \
       org.opencontainers.image.source="https://github.com/PiPhi-io/piphi-webrtc-sidecar" \
@@ -28,7 +28,10 @@ COPY --from=go2rtc /usr/local/bin/go2rtc /usr/local/bin/go2rtc
 COPY --from=dependencies /build/requirements.txt /tmp/requirements.txt
 COPY pyproject.toml ./
 COPY src ./src
-RUN pip install --no-cache-dir -r /tmp/requirements.txt \
+RUN apt-get update \
+    && apt-get install --no-install-recommends --yes ffmpeg \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip install --no-cache-dir -r /tmp/requirements.txt \
     && pip install --no-cache-dir --no-deps . \
     && rm /tmp/requirements.txt \
     && useradd --create-home --uid 10001 piphi \
