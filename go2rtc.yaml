@@ -5,4 +5,4 @@ api:
 webrtc:
   listen: ":8555"
 
-streams: {}
+streams:

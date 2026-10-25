@@ -3,11 +3,11 @@ from __future__ import annotations
 import os
 
 INTEGRATION_ID = "piphi.service.webrtc-sidecar"
-INTEGRATION_NAME = "PiPhi WebRTC Sidecar"
-INTEGRATION_VERSION = "0.2.3"
-PROJECT_KIND = "sidecar"
+INTEGRATION_NAME = "PiPhi Camera Media Service"
+INTEGRATION_VERSION = "0.3.0"
+PROJECT_KIND = "platform_service"
 PROJECT_PRESET = "platform-service"
-PROJECT_DOMAIN = "sidecar-service"
+PROJECT_DOMAIN = "camera-media"
 DEFAULT_PORT = 8090
 
 

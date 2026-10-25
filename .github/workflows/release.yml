@@ -86,8 +86,8 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=raw,value=latest
           labels: |
-            org.opencontainers.image.title=PiPhi WebRTC Sidecar
-            org.opencontainers.image.description=go2rtc-backed WebRTC camera sidecar for PiPhi Network
+            org.opencontainers.image.title=PiPhi Camera Media Service
+            org.opencontainers.image.description=Shared go2rtc-backed camera media service for PiPhi Network
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.version=${{ needs.validate.outputs.version }}
             org.opencontainers.image.revision=${{ github.sha }}

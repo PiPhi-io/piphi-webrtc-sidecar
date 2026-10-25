@@ -8,8 +8,6 @@ from uuid import uuid4
 
 from .go2rtc import Go2RtcClient, Go2RtcError, go2rtc, validate_source_url
 
-CAMERA_MEDIA_CONTRACT_VERSION = "camera.media.v1"
-
 
 @dataclass(frozen=True)
 class ActiveMediaSession:
@@ -48,7 +46,7 @@ class CameraMediaSessionBroker:
         async with self._lock:
             await self._expire_locked()
             if len(self._sessions) >= self.capacity:
-                raise CameraMediaCapacityError("camera media sidecar is at session capacity")
+                raise CameraMediaCapacityError("camera media service is at session capacity")
             session_id = uuid4().hex
             stream_name = f"piphi_session_{session_id}"
             await self.client.upsert_stream(stream_name, source)

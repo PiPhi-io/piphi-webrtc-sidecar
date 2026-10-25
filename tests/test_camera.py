@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import httpx
 import pytest
 
@@ -9,9 +11,13 @@ from piphi_webrtc_sidecar.go2rtc import (
     stream_name_for,
     validate_source_url,
 )
-from piphi_webrtc_sidecar.main import app
-from piphi_webrtc_sidecar.schemas import DeviceConfig
-from piphi_webrtc_sidecar.state import apply_config, registry
+
+
+def test_go2rtc_config_uses_patchable_streams_mapping() -> None:
+    config = (Path(__file__).parents[1] / "go2rtc.yaml").read_text(encoding="utf-8")
+
+    assert "streams: {}" not in config
+    assert config.endswith("streams:\n")
 
 
 def test_source_url_is_limited_to_rtsp_and_stream_names_are_safe() -> None:
@@ -57,38 +63,24 @@ async def test_go2rtc_client_rejects_malformed_answer() -> None:
 
 
 @pytest.mark.anyio
-async def test_camera_contract_exchanges_sdp_without_exposing_credentials(monkeypatch) -> None:
-    async def _upsert_stream(_name: str, _source_url: str) -> None:
-        return None
-
-    async def _exchange_offer(name: str, sdp: str) -> str:
-        assert name == "piphi_camera_1"
-        assert sdp == "v=0\r\n"
-        return "v=0\r\na=answer\r\n"
-
-    monkeypatch.setattr("piphi_webrtc_sidecar.state.go2rtc.upsert_stream", _upsert_stream)
-    monkeypatch.setattr("piphi_webrtc_sidecar.routes.camera.go2rtc.exchange_offer", _exchange_offer)
-    registry.entries.clear()
-    registry.state_snapshots.clear()
-    await apply_config(
-        DeviceConfig(
-            id="camera-1",
-            config_id="camera-1",
-            source_url="rtsp://user:top-secret@camera.local/live",
-            alias="Front door",
+async def test_go2rtc_client_sanitizes_upstream_signaling_errors() -> None:
+    client = Go2RtcClient(
+        transport=httpx.MockTransport(
+            lambda _request: httpx.Response(
+                500,
+                text=(
+                    "streams: unsupported codecs from "
+                    "rtsps://camera-user:camera-secret@camera.local/live"
+                ),
+            )
         )
     )
 
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.post(
-            "/v1/cameras/camera-1/webrtc",
-            json={"type": "offer", "sdp": "v=0\r\n", "include_audio": True},
-        )
-        state = await client.get("/state")
+    with pytest.raises(Go2RtcError) as captured:
+        await client.exchange_offer("piphi_camera_1", "v=0\r\n")
 
-    assert response.status_code == 201
-    assert response.json()["sdp"] == "v=0\r\na=answer\r\n"
-    assert response.json()["session_id"]
-    assert "top-secret" not in state.text
-    assert "camera.local" not in state.text
+    message = str(captured.value)
+    assert "unsupported codecs" in message
+    assert "camera-secret" not in message
+    assert "camera.local" not in message
+    assert "<camera-source>" in message

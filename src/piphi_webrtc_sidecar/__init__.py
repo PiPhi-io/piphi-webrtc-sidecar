@@ -1,1 +1,1 @@
-"""Piphi Webrtc Sidecar PiPhi sidecar runtime."""
+"""Shared PiPhi camera media service runtime."""

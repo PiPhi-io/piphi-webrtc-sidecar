@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import re
 from collections.abc import Mapping
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -11,6 +12,17 @@ import httpx
 
 class Go2RtcError(RuntimeError):
     """Raised when the private go2rtc control plane rejects a request."""
+
+
+_CAMERA_SOURCE_PATTERN = re.compile(r"(?i)\brtsps?://[^\s\"']+")
+
+
+def _safe_response_error(response: httpx.Response) -> str:
+    detail = " ".join(response.text.strip().split())
+    detail = _CAMERA_SOURCE_PATTERN.sub("<camera-source>", detail)
+    if not detail:
+        return f"status {response.status_code}"
+    return f"status {response.status_code}: {detail[:300]}"
 
 
 def validate_source_url(value: str) -> str:
@@ -81,7 +93,9 @@ class Go2RtcClient:
                 json={"type": "offer", "sdp": sdp},
             )
         if response.status_code not in {200, 201}:
-            raise Go2RtcError(f"go2rtc WebRTC exchange failed with status {response.status_code}")
+            raise Go2RtcError(
+                f"go2rtc WebRTC exchange failed with {_safe_response_error(response)}"
+            )
         try:
             payload = response.json()
         except ValueError as exc:

@@ -4,22 +4,16 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from piphi_runtime_kit_python import runtime_lifespan
 
 from .go2rtc import go2rtc_process
-from .state import runtime
-
-
-async def startup_sync(_runtime, _client) -> None:
-    # Real integrations can fetch an existing config snapshot from Core here.
-    return None
+from .media_sessions import media_session_broker
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     await go2rtc_process.start()
     try:
-        async with runtime_lifespan(runtime, on_startup=startup_sync):
-            yield
+        yield
     finally:
+        await media_session_broker.close_all()
         await go2rtc_process.stop()
