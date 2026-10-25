@@ -4,7 +4,7 @@
   "kind": "platform_service",
   "id": "piphi.service.webrtc-sidecar",
   "name": "PiPhi WebRTC Sidecar",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Local go2rtc-backed camera signaling service for PiPhi dashboard widgets.",
   "metadata": {
     "generator": "piphi-network-create",
@@ -34,7 +34,7 @@
     "support_email": "support@piphi.io"
   },
   "license": "MIT",
-  "image": "ghcr.io/piphi-io/piphi-webrtc-sidecar:0.2.1",
+  "image": "ghcr.io/piphi-io/piphi-webrtc-sidecar:0.2.2",
   "platforms": [
     "linux"
   ],
@@ -48,7 +48,7 @@
     "linux": {
       "type": "container",
       "container": {
-        "image": "ghcr.io/piphi-io/piphi-webrtc-sidecar:0.2.1",
+        "image": "ghcr.io/piphi-io/piphi-webrtc-sidecar:0.2.2",
         "ports": [
           {
             "container": 8090
@@ -185,7 +185,7 @@
     "metadata_version": 2,
     "display_name": "WebRTC Camera Service",
     "summary": "Connect local RTSP cameras to low-latency PiPhi dashboards.",
-    "category": "camera",
+    "category": "security",
     "device_types": [
       "camera",
       "platform_service"
