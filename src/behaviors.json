@@ -3,6 +3,7 @@
   "devices": [
     {
       "id": "camera",
+      "name": "WebRTC Camera Service",
       "actions": [
         {
           "id": "refresh",
