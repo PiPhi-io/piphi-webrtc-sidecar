@@ -7,6 +7,7 @@ import pytest
 
 from piphi_webrtc_sidecar.main import app
 from piphi_webrtc_sidecar.media_sessions import CameraMediaSessionBroker
+from piphi_webrtc_sidecar.routes.media_sidecar import require_camera_media_authorization
 
 
 class FakeGo2Rtc:
@@ -114,11 +115,19 @@ async def test_sidecar_requires_constant_time_bearer_auth_when_configured(monkey
 @pytest.mark.anyio
 async def test_sidecar_fails_closed_without_a_production_token(monkeypatch) -> None:
     monkeypatch.delenv("PIPHI_SIDECAR_TOKEN", raising=False)
+    monkeypatch.delenv("PIPHI_INTEGRATION_INTERNAL_TOKEN", raising=False)
     monkeypatch.setenv("PIPHI_ENV", "production")
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.get("/v1/camera-media/status")
     assert response.status_code == 503
+
+
+def test_sidecar_accepts_runtime_identity_token_in_production(monkeypatch) -> None:
+    monkeypatch.delenv("PIPHI_SIDECAR_TOKEN", raising=False)
+    monkeypatch.setenv("PIPHI_INTEGRATION_INTERNAL_TOKEN", "r" * 48)
+    monkeypatch.setenv("PIPHI_ENV", "production")
+    require_camera_media_authorization(f"Bearer {'r' * 48}")
 
 
 @pytest.mark.anyio

@@ -16,14 +16,10 @@ FIXTURES = json.loads(
 
 @pytest.mark.anyio
 async def test_runtime_conforms_to_shared_contract_fixtures(monkeypatch) -> None:
-    async def _upsert_stream(_name: str, _source_url: str) -> None:
-        return None
-
     async def _health() -> dict[str, object]:
         return {"version": "test"}
 
-    monkeypatch.setattr("piphi_webrtc_sidecar.state.go2rtc.upsert_stream", _upsert_stream)
-    monkeypatch.setattr("piphi_webrtc_sidecar.routes.commands.go2rtc.health", _health)
+    monkeypatch.setattr("piphi_webrtc_sidecar.routes.health.go2rtc.health", _health)
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
         for fixture in FIXTURES["cases"]:

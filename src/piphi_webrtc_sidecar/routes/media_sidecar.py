@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 import secrets
 from typing import Literal
@@ -8,36 +9,37 @@ import httpx
 from fastapi import APIRouter, Depends, Header, HTTPException, Response
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from ..contract import CAMERA_MEDIA_CONTRACT_VERSION
 from ..go2rtc import Go2RtcError, validate_source_url
-from ..media_sessions import (
-    CAMERA_MEDIA_CONTRACT_VERSION,
-    CameraMediaCapacityError,
-    media_session_broker,
-)
+from ..media_sessions import CameraMediaCapacityError, media_session_broker
 
 MAX_SDP_BYTES = 256 * 1024
+logger = logging.getLogger(__name__)
 
 
 def require_camera_media_authorization(
     authorization: str | None = Header(default=None),
 ) -> None:
-    expected = os.getenv("PIPHI_SIDECAR_TOKEN", "").strip()
+    expected = (
+        os.getenv("PIPHI_SIDECAR_TOKEN", "").strip()
+        or os.getenv("PIPHI_INTEGRATION_INTERNAL_TOKEN", "").strip()
+    )
     production = os.getenv("PIPHI_ENV", "development").strip().lower() == "production"
     if not expected:
         if production:
             raise HTTPException(
                 status_code=503,
-                detail="camera media sidecar authentication is not configured",
+                detail="camera media service authentication is not configured",
             )
         return
     scheme, _, credential = str(authorization or "").partition(" ")
     if scheme.lower() != "bearer" or not secrets.compare_digest(credential, expected):
-        raise HTTPException(status_code=401, detail="camera media sidecar authorization failed")
+        raise HTTPException(status_code=401, detail="camera media service authorization failed")
 
 
 router = APIRouter(
     prefix="/v1/camera-media",
-    tags=["camera-media-sidecar"],
+    tags=["camera-media-service"],
     dependencies=[Depends(require_camera_media_authorization)],
 )
 
@@ -101,6 +103,7 @@ async def open_camera_session(request: OpenCameraSession) -> dict[str, object]:
             },
         ) from exc
     except (Go2RtcError, httpx.HTTPError, ValueError) as exc:
+        logger.warning("camera media signaling failed: %s", exc)
         raise HTTPException(status_code=502, detail="camera WebRTC signaling failed") from exc
     return {
         "contract_version": CAMERA_MEDIA_CONTRACT_VERSION,

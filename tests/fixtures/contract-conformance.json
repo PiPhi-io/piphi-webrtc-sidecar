@@ -6,21 +6,12 @@
       "method": "GET",
       "path": "/health",
       "status": 200,
-      "required_any_keys": [
-        [
-          "ok",
-          "status"
-        ]
-      ]
-    },
-    {
-      "id": "ui_config",
-      "method": "GET",
-      "path": "/ui-config",
-      "status": 200,
       "required_keys": [
-        "schema",
-        "uiSchema"
+        "status",
+        "service_id",
+        "version",
+        "go2rtc_available",
+        "go2rtc_version"
       ]
     },
     {
@@ -29,6 +20,7 @@
       "path": "/contract",
       "status": 200,
       "required_keys": [
+        "service_id",
         "integration_id",
         "name",
         "version",
@@ -40,64 +32,17 @@
       ]
     },
     {
-      "id": "config",
-      "method": "POST",
-      "path": "/config",
-      "status": 200,
-      "body": {
-        "id": "demo-camera",
-        "source_url": "rtsp://camera.local/live",
-        "alias": "Demo Camera"
-      },
-      "required_any_keys": [
-        [
-          "config_id",
-          "configId"
-        ],
-        [
-          "status",
-          "ok"
-        ]
-      ]
-    },
-    {
-      "id": "entities",
+      "id": "camera_media_status",
       "method": "GET",
-      "path": "/entities",
+      "path": "/v1/camera-media/status",
       "status": 200,
       "required_keys": [
-        "entities",
-        "capabilities",
-        "commands"
-      ]
-    },
-    {
-      "id": "command",
-      "method": "POST",
-      "path": "/command",
-      "status": 200,
-      "body": {
-        "contract_version": "automation.runtime.command.v1",
-        "command": "refresh",
-        "target": {
-          "device_id": "demo-camera",
-          "config_id": "demo-camera"
-        },
-        "params": {},
-        "capability": "device.refresh",
-        "capability_requirements": [
-          "device.refresh"
-        ]
-      },
-      "required_any_keys": [
-        [
-          "ok",
-          "status"
-        ],
-        [
-          "command",
-          "event"
-        ]
+        "contract_version",
+        "message_type",
+        "audience",
+        "ready",
+        "active_sessions",
+        "session_capacity"
       ]
     }
   ]

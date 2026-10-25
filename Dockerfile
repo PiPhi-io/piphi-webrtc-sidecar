@@ -1,4 +1,4 @@
-FROM ghcr.io/alexxit/go2rtc:1.9.13@sha256:f394f6329f5389a4c9a7fc54b09fdec9621bbb78bf7a672b973440bbdfb02241 AS go2rtc
+FROM ghcr.io/alexxit/go2rtc:1.9.15@sha256:e098de5c2f8040dc3d4784ed2d5cfdac3b0979f9349afe587ef6a670a14b9f4d AS go2rtc
 
 FROM python:3.12-slim@sha256:78387bc3881b8273120a12ebe6c1ab22b018ccc2c9adf565ae1ac9b536e184ea AS dependencies
 
@@ -10,9 +10,9 @@ RUN pdm export --prod --without-hashes --output requirements.txt
 
 FROM python:3.12-slim@sha256:78387bc3881b8273120a12ebe6c1ab22b018ccc2c9adf565ae1ac9b536e184ea
 
-ARG APP_VERSION=0.2.3
-LABEL org.opencontainers.image.title="PiPhi WebRTC Sidecar" \
-      org.opencontainers.image.description="Private go2rtc adapter for PiPhi camera widgets" \
+ARG APP_VERSION=0.3.0
+LABEL org.opencontainers.image.title="PiPhi Camera Media Service" \
+      org.opencontainers.image.description="Shared private go2rtc media service for PiPhi camera integrations" \
       org.opencontainers.image.source="https://github.com/PiPhi-io/piphi-webrtc-sidecar" \
       org.opencontainers.image.version="${APP_VERSION}"
 
