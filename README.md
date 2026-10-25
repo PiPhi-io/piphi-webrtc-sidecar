@@ -18,6 +18,10 @@ model are a zero-setup home service.
 - Camera source URLs are accepted only in authenticated, Core-to-service session requests and are
   never returned by health, diagnostics, contract, or session responses.
 - The go2rtc control API listens only on `127.0.0.1:1984` inside the container.
+- Sources use go2rtc's native RTSP client first. If that client reaches the camera but terminates
+  the WebRTC exchange with `EOF`, the service retries once through an FFmpeg stream-copy relay.
+- The fallback does not transcode video or audio. Its internal RTSP listener is loopback-only, and
+  go2rtc may execute only the packaged `/usr/bin/ffmpeg` binary.
 
 ## Runtime contract
 
@@ -41,12 +45,12 @@ pdm run python scripts/validate.py
 ## Container
 
 ```bash
-docker build -t ghcr.io/piphi-io/piphi-webrtc-sidecar:0.3.0 .
+docker build -t ghcr.io/piphi-io/piphi-webrtc-sidecar:0.3.1 .
 docker run --rm \
   -p 8090:8090 \
   -p 8555:8555/tcp \
   -p 8555:8555/udp \
-  ghcr.io/piphi-io/piphi-webrtc-sidecar:0.3.0
+  ghcr.io/piphi-io/piphi-webrtc-sidecar:0.3.1
 ```
 
 The pinned upstream is go2rtc `1.9.15`. No host networking or privileged container mode is

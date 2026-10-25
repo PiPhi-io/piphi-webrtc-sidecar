@@ -5,6 +5,7 @@ import asyncio
 import httpx
 import pytest
 
+from piphi_webrtc_sidecar.go2rtc import Go2RtcClient, Go2RtcError
 from piphi_webrtc_sidecar.main import app
 from piphi_webrtc_sidecar.media_sessions import CameraMediaSessionBroker
 from piphi_webrtc_sidecar.routes.media_sidecar import require_camera_media_authorization
@@ -18,6 +19,9 @@ class FakeGo2Rtc:
     async def upsert_stream(self, name: str, source_url: str) -> None:
         self.sources[name] = source_url
 
+    async def upsert_ffmpeg_stream(self, name: str, source_url: str) -> None:
+        self.sources[name] = f"ffmpeg:{source_url}"
+
     async def exchange_offer(self, name: str, sdp: str) -> str:
         assert name in self.sources
         assert sdp == "v=0\r\n"
@@ -26,6 +30,43 @@ class FakeGo2Rtc:
     async def remove_stream(self, name: str) -> None:
         self.sources.pop(name, None)
         self.removed.append(name)
+
+
+class NativeEofGo2Rtc(FakeGo2Rtc):
+    def __init__(self) -> None:
+        super().__init__()
+        self.exchange_attempts = 0
+        self.upsert_modes: list[str] = []
+
+    async def upsert_stream(self, name: str, source_url: str) -> None:
+        self.upsert_modes.append("native")
+        await super().upsert_stream(name, source_url)
+
+    async def upsert_ffmpeg_stream(self, name: str, source_url: str) -> None:
+        self.upsert_modes.append("ffmpeg")
+        await super().upsert_ffmpeg_stream(name, source_url)
+
+    async def exchange_offer(self, name: str, sdp: str) -> str:
+        self.exchange_attempts += 1
+        if self.exchange_attempts == 1:
+            raise Go2RtcError(
+                "go2rtc WebRTC exchange failed with status 500: EOF",
+                operation="webrtc_exchange",
+                status_code=500,
+                response_detail="EOF",
+            )
+        return await super().exchange_offer(name, sdp)
+
+
+class InvalidOfferGo2Rtc(NativeEofGo2Rtc):
+    async def exchange_offer(self, name: str, sdp: str) -> str:
+        self.exchange_attempts += 1
+        raise Go2RtcError(
+            "go2rtc rejected the WebRTC offer",
+            operation="webrtc_exchange",
+            status_code=400,
+            response_detail="invalid SDP",
+        )
 
 
 @pytest.mark.anyio
@@ -147,3 +188,56 @@ async def test_broker_actively_expires_abandoned_sessions(monkeypatch) -> None:
     await asyncio.sleep(0)
     assert broker.active_count == 0
     assert active.stream_name in fake.removed
+
+
+@pytest.mark.anyio
+async def test_broker_retries_native_rtsp_eof_through_ffmpeg_copy_relay() -> None:
+    fake = NativeEofGo2Rtc()
+    broker = CameraMediaSessionBroker(fake, capacity=1)  # type: ignore[arg-type]
+
+    active, answer = await broker.open(
+        source_url="rtsp://user:top-secret@camera.local/stream0",
+        offer_sdp="v=0\r\n",
+        idle_timeout_seconds=60,
+    )
+
+    assert answer == "v=0\r\na=answer\r\n"
+    assert fake.upsert_modes == ["native", "ffmpeg"]
+    assert fake.exchange_attempts == 2
+    assert fake.sources[active.stream_name].startswith("ffmpeg:rtsp://")
+    assert fake.removed == [active.stream_name]
+    await broker.close(active.session_id)
+
+
+@pytest.mark.anyio
+async def test_broker_does_not_retry_offer_validation_failures() -> None:
+    fake = InvalidOfferGo2Rtc()
+    broker = CameraMediaSessionBroker(fake, capacity=1)  # type: ignore[arg-type]
+
+    with pytest.raises(Go2RtcError, match="rejected the WebRTC offer"):
+        await broker.open(
+            source_url="rtsp://camera.local/stream0",
+            offer_sdp="v=0\r\n",
+            idle_timeout_seconds=60,
+        )
+
+    assert fake.upsert_modes == ["native"]
+    assert fake.exchange_attempts == 1
+    assert fake.sources == {}
+
+
+@pytest.mark.anyio
+async def test_ffmpeg_copy_relay_keeps_credentials_inside_go2rtc_request() -> None:
+    captured_source = ""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal captured_source
+        captured_source = request.url.params["src"]
+        return httpx.Response(200)
+
+    client = Go2RtcClient(transport=httpx.MockTransport(handler))
+    source = "rtsp://user:top-secret@camera.local/stream0"
+
+    await client.upsert_ffmpeg_stream("camera", source)
+
+    assert captured_source == f"ffmpeg:{source}#video=copy#audio=copy"
