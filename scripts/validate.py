@@ -54,6 +54,9 @@ else:
     device_ids: set[str] = set()
     for device_index, device in enumerate(behavior.get("devices") or []):
         device_id = str(device.get("id") or "").strip()
+        device_name = str(device.get("name") or "").strip()
+        if not device_name:
+            errors.append(f"behaviors.devices[{device_index}].name is required")
         if device_id in device_ids:
             errors.append(f"behaviors.devices[{device_index}].id duplicates another device id")
         if device_id:
