@@ -43,15 +43,19 @@ class CameraMediaSessionBroker:
         idle_timeout_seconds: int,
     ) -> tuple[ActiveMediaSession, str]:
         source = validate_source_url(source_url)
+        normalized_offer = offer_sdp if offer_sdp.endswith("\n") else f"{offer_sdp}\r\n"
         async with self._lock:
             await self._expire_locked()
             if len(self._sessions) >= self.capacity:
                 raise CameraMediaCapacityError("camera media service is at session capacity")
             session_id = uuid4().hex
             stream_name = f"piphi_session_{session_id}"
-            await self.client.upsert_stream(stream_name, source)
+            # Normalize the camera video before negotiation. Some RTSP cameras omit
+            # profile metadata or advertise H.264 that browsers accept in SDP but
+            # cannot decode once packets arrive.
+            await self.client.upsert_browser_compatible_ffmpeg_stream(stream_name, source)
             try:
-                answer_sdp = await self.client.exchange_offer(stream_name, offer_sdp)
+                answer_sdp = await self.client.exchange_offer(stream_name, normalized_offer)
             except Go2RtcError as exc:
                 if not exc.is_native_source_eof:
                     await self._remove_stream_safely(stream_name)
@@ -59,15 +63,15 @@ class CameraMediaSessionBroker:
                 await self._remove_stream_safely(stream_name)
                 await self.client.upsert_ffmpeg_stream(stream_name, source)
                 try:
-                    answer_sdp = await self.client.exchange_offer(stream_name, offer_sdp)
+                    answer_sdp = await self.client.exchange_offer(stream_name, normalized_offer)
                 except Go2RtcError as relay_exc:
                     if not relay_exc.is_native_source_eof:
                         await self._remove_stream_safely(stream_name)
                         raise
                     await self._remove_stream_safely(stream_name)
-                    await self.client.upsert_browser_compatible_ffmpeg_stream(stream_name, source)
+                    await self.client.upsert_stream(stream_name, source)
                     try:
-                        answer_sdp = await self.client.exchange_offer(stream_name, offer_sdp)
+                        answer_sdp = await self.client.exchange_offer(stream_name, normalized_offer)
                     except Exception:
                         await self._remove_stream_safely(stream_name)
                         raise
