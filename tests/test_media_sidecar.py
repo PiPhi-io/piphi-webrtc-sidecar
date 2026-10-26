@@ -211,7 +211,22 @@ async def test_broker_actively_expires_abandoned_sessions(monkeypatch) -> None:
 
 
 @pytest.mark.anyio
-async def test_broker_retries_native_rtsp_eof_through_ffmpeg_copy_relay() -> None:
+async def test_broker_restores_terminal_sdp_line_ending() -> None:
+    fake = FakeGo2Rtc()
+    broker = CameraMediaSessionBroker(fake, capacity=1)  # type: ignore[arg-type]
+
+    active, answer = await broker.open(
+        source_url="rtsp://camera.local/live",
+        offer_sdp="v=0",
+        idle_timeout_seconds=60,
+    )
+
+    assert answer == "v=0\r\na=answer\r\n"
+    await broker.close(active.session_id)
+
+
+@pytest.mark.anyio
+async def test_broker_retries_browser_normalization_eof_through_ffmpeg_copy_relay() -> None:
     fake = NativeEofGo2Rtc()
     broker = CameraMediaSessionBroker(fake, capacity=1)  # type: ignore[arg-type]
 
@@ -222,7 +237,7 @@ async def test_broker_retries_native_rtsp_eof_through_ffmpeg_copy_relay() -> Non
     )
 
     assert answer == "v=0\r\na=answer\r\n"
-    assert fake.upsert_modes == ["native", "ffmpeg"]
+    assert fake.upsert_modes == ["ffmpeg-h264", "ffmpeg"]
     assert fake.exchange_attempts == 2
     assert fake.sources[active.stream_name].startswith("ffmpeg:rtsp://")
     assert fake.removed == [active.stream_name]
@@ -230,7 +245,7 @@ async def test_broker_retries_native_rtsp_eof_through_ffmpeg_copy_relay() -> Non
 
 
 @pytest.mark.anyio
-async def test_broker_transcodes_when_copied_h264_cannot_match_browser_offer() -> None:
+async def test_broker_falls_back_to_native_when_ffmpeg_sources_cannot_match_offer() -> None:
     fake = NativeAndCopyEofGo2Rtc()
     broker = CameraMediaSessionBroker(fake, capacity=1)  # type: ignore[arg-type]
 
@@ -241,9 +256,9 @@ async def test_broker_transcodes_when_copied_h264_cannot_match_browser_offer() -
     )
 
     assert answer == "v=0\r\na=answer\r\n"
-    assert fake.upsert_modes == ["native", "ffmpeg", "ffmpeg-h264"]
+    assert fake.upsert_modes == ["ffmpeg-h264", "ffmpeg", "native"]
     assert fake.exchange_attempts == 3
-    assert fake.sources[active.stream_name].startswith("ffmpeg-h264:rtsp://")
+    assert fake.sources[active.stream_name].startswith("rtsp://")
     assert fake.removed == [active.stream_name, active.stream_name]
     await broker.close(active.session_id)
 
@@ -260,7 +275,7 @@ async def test_broker_does_not_retry_offer_validation_failures() -> None:
             idle_timeout_seconds=60,
         )
 
-    assert fake.upsert_modes == ["native"]
+    assert fake.upsert_modes == ["ffmpeg-h264"]
     assert fake.exchange_attempts == 1
     assert fake.sources == {}
 
