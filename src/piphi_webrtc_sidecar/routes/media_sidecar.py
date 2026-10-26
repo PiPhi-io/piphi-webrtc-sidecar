@@ -88,6 +88,8 @@ async def open_camera_session(request: OpenCameraSession) -> dict[str, object]:
             source_url=request.source.source_url,
             offer_sdp=request.offer.sdp,
             idle_timeout_seconds=request.idle_timeout_seconds,
+            preferred_transport=request.source.preferred_transport,
+            connect_timeout_seconds=request.source.connect_timeout_seconds,
         )
     except CameraMediaCapacityError as exc:
         raise HTTPException(
